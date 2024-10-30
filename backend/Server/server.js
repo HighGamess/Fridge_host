@@ -6,7 +6,7 @@ const { Client } = require('pg');
 
 const server = express();
 const port = process.env.PORT || 3000;
-const secretKey = "your_secret_key"; // Храните это в надежном месте
+const secretKey = "your_secret_key";
 
 const client = new Client({
     user: 'postgres',
@@ -23,7 +23,6 @@ client.connect()
     .then(() => console.log('Connected to PostgreSQL'))
     .catch(err => console.error('Connection error', err.stack));
 
-// Метод для выполнения запросов
 async function executeQuery(query, params = []) {
     try {
         const res = await client.query(query, params);
@@ -34,20 +33,18 @@ async function executeQuery(query, params = []) {
     }
 }
 
-server.use(cors()); // Добавляем CORS middleware
+server.use(cors());
 server.use(express.json());
 server.use(express.static(path.join(__dirname, "FridgeHost")));
 
-// Генерация JWT
 function generateToken(tgId) {
     return jwt.sign({ tgId }, secretKey, { expiresIn: '1h' });
 }
 
-// Верификация JWT
 function verifyToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    console.log("Received Token:", token); // Логируем токен для проверки
+    console.log("Received Token:", token);
 
     if (!token) {
         return res.status(403).send("A token is required for authentication");
@@ -62,7 +59,6 @@ function verifyToken(req, res, next) {
     return next();
 }
 
-// Эндпоинт для аутентификации
 server.get("/auth", async (req, res) => {
     const tgId = req.query.tgId;
     const query = 'SELECT * FROM users WHERE telegram_id = $1';
@@ -85,9 +81,8 @@ server.get("/auth", async (req, res) => {
     }
 });
 
-// Эндпоинт для сохранения игры
 server.get("/save", verifyToken, async (req, res) => {
-    const saveData = JSON.parse(req.query.saveData); // Парсим значение saveData
+    const saveData = JSON.parse(req.query.saveData);
     const tgId = req.query.tgId;
     const query = 'SELECT * FROM users WHERE telegram_id = $1';
     const params = [tgId];
@@ -107,7 +102,6 @@ server.get("/save", verifyToken, async (req, res) => {
     }
 });
 
-// Эндпоинт для загрузки игры
 server.get("/load", verifyToken, async (req, res) => {
     const { tgId } = req.query;
     const query = 'SELECT save_data FROM users WHERE telegram_id = $1';
