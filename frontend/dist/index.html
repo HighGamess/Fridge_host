@@ -56,11 +56,11 @@
       }
 
       var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/FridgeHost.loader.js";
+      var loaderUrl = buildUrl + "/dist.loader.js";
       var config = {
-        dataUrl: buildUrl + "/FridgeHost.data",
-        frameworkUrl: buildUrl + "/FridgeHost.framework.js",
-        codeUrl: buildUrl + "/FridgeHost.wasm",
+        dataUrl: buildUrl + "/dist.data",
+        frameworkUrl: buildUrl + "/dist.framework.js",
+        codeUrl: buildUrl + "/dist.wasm",
         streamingAssetsUrl: "StreamingAssets",
         companyName: "sd",
         productName: "Fridge Stacker",
@@ -91,7 +91,7 @@
         canvas.style.width = window.innerWidth + 'px';
         canvas.style.height = window.innerHeight + 'px';
 
-        //unityShowBanner('WebGL builds are not supported on mobile devices.');
+        unityShowBanner('WebGL builds are not supported on mobile devices.');
       } else {
         // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
 

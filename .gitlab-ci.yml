@@ -1,15 +1,28 @@
 stages:
   - frontend
   - backend
+  - bot
 
 frontend:
   stage: frontend
+  variables:
+    FRONTEND_DIR: frontend
   trigger:
     include: $FRONTEND_DIR/.gitlab-ci.yml
     strategy: depend
 
 backend:
   stage: backend
+  variables:
+    BACKEND_DIR: backend/Server
+  trigger:
+    include: $BACKEND_DIR/.gitlab-ci.yml
+    strategy: depend
+
+bot:
+  stage: bot
+  variables:
+    BACKEND_DIR: backend/Bot 
   trigger:
     include: $BACKEND_DIR/.gitlab-ci.yml
     strategy: depend

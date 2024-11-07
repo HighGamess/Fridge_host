@@ -1,19 +1,20 @@
-# Используем официальный образ Node.js для бота
-FROM node:14 AS bot
+# Используем базовый образ Node.js
+FROM node:14
 
-# Устанавливаем рабочую директорию для бота
-WORKDIR /usr/src/bot
+# Устанавливаем рабочую директорию для нашего приложения
+WORKDIR /app
 
-# Копируем файлы бота в контейнер
-COPY ./package*.json ./
-COPY ./index.js ./
+# Копируем package.json и package-lock.json для установки зависимостей
+COPY package*.json ./
 
-# Устанавливаем зависимости и запускаем бота
+# Устанавливаем зависимости
 RUN npm install
-RUN npm i node-telegram-bot-api
-RUN npm install telegraf
-RUN npm install express --save
 
+# Копируем весь код из директории backend в рабочую директорию
+COPY . .
+
+# Открываем порт, на котором будет работать сервер
+EXPOSE 3000
+
+# Команда для запуска сервера
 CMD ["npm", "start"]
-
-
