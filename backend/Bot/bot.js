@@ -1,16 +1,17 @@
+require('dotenv').config();
 const TelegramBot = require("node-telegram-bot-api");
 
-const TOKEN = "7540708072:AAEArLeZEv8JHLjPWLI990tJFytaH9Gw5CQ";
+const TOKEN = process.env.TELEGRAM_BOT_TOKEN; // Использование переменной окружения для токена
+const GAME_URL = process.env.GAME_URL; // Использование переменной окружения для URL игры
 const bot = new TelegramBot(TOKEN, { polling: true });
 const gameName = "fridgeTestGame";
-const queries = {};
 
 bot.onText(/help/, (msg) => {
     bot.sendMessage(msg.from.id, "Say /game if you want to play.");
 });
 
 bot.onText(/start|game/, (msg) => {
-    const gameurl = `https://anon121213.github.io/FridgeHost/?tgId=${msg.from.id}`;
+    const gameurl = `${GAME_URL}?tgId=${msg.from.id}`;
     bot.sendGame(msg.from.id, gameName).catch((error) => {
         console.error("Error sending game:", error);
     });
@@ -31,8 +32,7 @@ bot.on("callback_query", (query) => {
             console.error("Error responding to callback query:", error);
         });
     } else {
-        queries[query.id] = query;
-        const gameurl = `https://anon121213.github.io/FridgeHost/?tgId=${query.from.id}`;
+        const gameurl = `${GAME_URL}?initData=${query.data}`;
         bot.answerCallbackQuery({
             callback_query_id: query.id,
             url: gameurl,
@@ -54,4 +54,4 @@ bot.on("inline_query", (iq) => {
     });
 });
 
-console.log("bot is run");
+console.log("bot is running");

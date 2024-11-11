@@ -1,19 +1,23 @@
+require('dotenv').config(); // Загрузка переменных окружения
+
 const express = require("express");
 const path = require("path");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const { Client } = require('pg');
+const crypto = require('crypto');
 
 const server = express();
 const port = process.env.PORT || 3000;
-const secretKey = "your_secret_key";
+const secretKey = process.env.JWT_SECRET;
+const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
 const client = new Client({
-    user: 'postgres',
-    host: 'fridge.ctspxwciisx9.us-west-2.rds.amazonaws.com',
-    database: 'fridge',
-    password: 'sz0x9GIcQWIft7lh',
-    port: 5432,
+    user: process.env.POSTGRES_USER,
+    host: process.env.POSTGRES_HOST,
+    database: process.env.POSTGRES_DATABASE,
+    password: process.env.POSTGRES_PASSWORD,
+    port: process.env.POSTGRES_PORT,
     ssl: {
         rejectUnauthorized: false
     }
@@ -44,7 +48,6 @@ function generateToken(tgId) {
 function verifyToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    console.log("Received Token:", token);
 
     if (!token) {
         return res.status(403).send("A token is required for authentication");
@@ -59,8 +62,28 @@ function verifyToken(req, res, next) {
     return next();
 }
 
+function validateTelegramData(data) {
+    const secretKey = crypto.createHash('sha256').update(botToken).digest();
+    const checkString = Object.keys(data)
+        .filter(key => key !== 'hash')
+        .map(key => `${key}=${data[key]}`)
+        .sort()
+        .join('\n');
+    const hash = crypto.createHmac('sha256', secretKey)
+        .update(checkString)
+        .digest('hex');
+    return hash === data.hash;
+}
+
 server.get("/auth", async (req, res) => {
-    const tgId = req.query.tgId;
+    const initData = req.query.initData;
+    const data = Object.fromEntries(new URLSearchParams(initData));
+
+    if (!validateTelegramData(data)) {
+        return res.status(403).send("Invalid Telegram data");
+    }
+
+    const tgId = data.id;
     const query = 'SELECT * FROM users WHERE telegram_id = $1';
     const params = [tgId];
 
@@ -82,11 +105,11 @@ server.get("/auth", async (req, res) => {
 });
 
 server.get("/save", verifyToken, async (req, res) => {
-    const saveData = JSON.parse(req.query.saveData);
-    const tgId = req.query.tgId;
+    const saveData = req.query.saveData;
+    const tgId = req.user.tgId;
+
     const query = 'SELECT * FROM users WHERE telegram_id = $1';
     const params = [tgId];
-    console.log(saveData)
 
     try {
         const users = await executeQuery(query, params);
@@ -103,7 +126,7 @@ server.get("/save", verifyToken, async (req, res) => {
 });
 
 server.get("/load", verifyToken, async (req, res) => {
-    const { tgId } = req.query;
+    const tgId = req.user.tgId;
     const query = 'SELECT save_data FROM users WHERE telegram_id = $1';
     const params = [tgId];
 
