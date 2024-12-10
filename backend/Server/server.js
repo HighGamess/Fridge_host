@@ -7,10 +7,15 @@ const cors = require("cors");
 const { Client } = require('pg');
 const crypto = require('crypto');
 
+const sha256 = (data) => crypto.createHash('sha256').update(data).digest('hex');
+
 const server = express();
 const port = process.env.PORT || 3000;
 const secretKey = process.env.JWT_SECRET;
-const botToken = process.env.TELEGRAM_BOT_TOKEN;
+const botSecretKey = process.env.BOT_SECRET_KEY; // Добавлен Telegram Bot Secret Key
+
+console.log("POSTGRES_USER:", process.env.POSTGRES_USER); 
+console.log("POSTGRES_PASSWORD:", process.env.POSTGRES_PASSWORD);
 
 const client = new Client({
     user: process.env.POSTGRES_USER,
@@ -41,8 +46,8 @@ server.use(cors());
 server.use(express.json());
 server.use(express.static(path.join(__dirname, "FridgeHost")));
 
-function generateToken(tgId) {
-    return jwt.sign({ tgId }, secretKey, { expiresIn: '1h' });
+function generateToken(payload) {
+    return jwt.sign(payload, secretKey, { expiresIn: '1h' });
 }
 
 function verifyToken(req, res, next) {
@@ -62,41 +67,55 @@ function verifyToken(req, res, next) {
     return next();
 }
 
-function validateTelegramData(data) {
-    const secretKey = crypto.createHash('sha256').update(botToken).digest();
-    const checkString = Object.keys(data)
-        .filter(key => key !== 'hash')
-        .map(key => `${key}=${data[key]}`)
-        .sort()
-        .join('\n');
-    const hash = crypto.createHmac('sha256', secretKey)
-        .update(checkString)
-        .digest('hex');
-    return hash === data.hash;
-}
+server.get('/GetJwt', (req, res) => {
+    const authorizationHeader = req.headers['authorization'];
 
-server.get("/auth", async (req, res) => {
-    const initData = req.query.initData;
-    const data = Object.fromEntries(new URLSearchParams(initData));
-
-    if (!validateTelegramData(data)) {
-        return res.status(403).send("Invalid Telegram data");
+    if (!authorizationHeader) {
+        return res.status(400).json({ error: 'Authorization header is missing' });
     }
 
-    const tgId = data.id;
-    const query = 'SELECT * FROM users WHERE telegram_id = $1';
-    const params = [tgId];
+    const initDataRaw = authorizationHeader; 
+    const initData = initDataRaw.replace(/tg_hash=[^&]*&?/, ''); // Удаляем tg_hash из initData
+    const tgHash = authorizationHeader.match(/tg_hash=([^&]*)/)[1]; // Извлекаем tg_hash
+
+    const computedHash = sha256(initData + botSecretKey); // Вычисляем хэш с bot_secret_key
+
+    if (computedHash !== tgHash) {
+        return res.status(401).json({ error: 'Invalid hash' });
+    }
+
+    const jwtToken = generateToken({ hash: computedHash });  // Генерация JWT на основе данных
+
+    res.json({ jwt: jwtToken });
+});
+
+// Использование JWT для авторизации
+server.get("/auth", async (req, res) => {
+    const authHeader = req.headers['authorization'];
+
+    if (!authHeader) {
+        return res.status(400).send("Authorization header is missing");
+    }
+
+    const token = authHeader.split(' ')[1];
 
     try {
+        const decoded = jwt.verify(token, secretKey);
+        const hash = decoded.hash;  // Получаем хэш из декодированного токена
+
+        // Теперь, вместо tgId, используем hash для поиска в базе данных
+        const query = 'SELECT * FROM users WHERE hash = $1';
+        const params = [hash];
+
         const users = await executeQuery(query, params);
         if (users.length > 0) {
-            const token = generateToken(tgId);
+            // Пользователь найден, возвращаем token
             res.status(200).json({ token });
         } else {
+            // Новый пользователь, создаем запись в базе данных
             const defaultData = JSON.stringify({ level: 0, money: 0 });
-            const insertQuery = 'INSERT INTO users (telegram_id, save_data) VALUES ($1, $2) RETURNING *';
-            const newUser = await executeQuery(insertQuery, [tgId, defaultData]);
-            const token = generateToken(tgId);
+            const insertQuery = 'INSERT INTO users (hash, save_data) VALUES ($1, $2) RETURNING *';
+            const newUser = await executeQuery(insertQuery, [hash, defaultData]);
             res.status(201).json({ token });
         }
     } catch (err) {
@@ -104,44 +123,38 @@ server.get("/auth", async (req, res) => {
     }
 });
 
+// API для сохранения данных
 server.get("/save", verifyToken, async (req, res) => {
-    const saveData = req.query.saveData;
-    const tgId = req.user.tgId;
-
-    const query = 'SELECT * FROM users WHERE telegram_id = $1';
-    const params = [tgId];
+    const saveData = JSON.parse(req.query.saveData);
+    const hash = req.user.hash;  // Получаем хэш из декодированного токена
 
     try {
-        const users = await executeQuery(query, params);
-        if (users.length > 0) {
-            const updateQuery = 'UPDATE users SET save_data = $2 WHERE telegram_id = $1';
-            await executeQuery(updateQuery, [tgId, JSON.stringify(saveData)]);
-            res.status(200).send("Game saved successfully.");
-        } else {
-            res.status(404).send("User not found.");
-        }
+        const updateQuery = 'UPDATE users SET save_data = $1 WHERE hash = $2';
+        await executeQuery(updateQuery, [JSON.stringify(saveData), hash]);
+        res.status(200).send("Data saved successfully.");
     } catch (err) {
-        res.status(500).send("Error occurred during saving.");
+        res.status(500).send("Error occurred while saving data.");
     }
 });
 
+// API для загрузки данных
 server.get("/load", verifyToken, async (req, res) => {
-    const tgId = req.user.tgId;
-    const query = 'SELECT save_data FROM users WHERE telegram_id = $1';
-    const params = [tgId];
+    const hash = req.user.hash;  // Получаем хэш из декодированного токена
 
     try {
-        const users = await executeQuery(query, params);
-        if (users.length > 0) {
-            res.status(200).json(users[0].save_data);
+        const query = 'SELECT save_data FROM users WHERE hash = $1';
+        const result = await executeQuery(query, [hash]);
+
+        if (result.length > 0) {
+            res.status(200).json({ saveData: result[0].save_data });
         } else {
-            res.status(404).send("User not found.");
+            res.status(404).send("User data not found.");
         }
     } catch (err) {
-        res.status(500).send("Error occurred during loading.");
+        res.status(500).send("Error occurred while loading data.");
     }
 });
 
-server.listen(port, function () {
+server.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });

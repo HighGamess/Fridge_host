@@ -1,8 +1,8 @@
 require('dotenv').config();
 const TelegramBot = require("node-telegram-bot-api");
 
-const TOKEN = process.env.TELEGRAM_BOT_TOKEN; // Использование переменной окружения для токена
-const GAME_URL = process.env.GAME_URL; // Использование переменной окружения для URL игры
+const TOKEN = process.env.TELEGRAM_BOT_TOKEN; 
+const GAME_URL = process.env.GAME_URL;
 const bot = new TelegramBot(TOKEN, { polling: true });
 const gameName = "fridgeTestGame";
 
