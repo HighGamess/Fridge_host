@@ -10,11 +10,18 @@ COPY package*.json ./
 # Устанавливаем зависимости
 RUN npm install
 
-# Копируем весь код из директории backend в рабочую директорию
-COPY . .
+# Копируем весь код в рабочую директорию
+COPY Bot ./Bot
+COPY Server ./Server
+COPY DataFrontend ./DataFrontend
+COPY frontend ./frontend
 
-# Открываем порт, на котором будет работать сервер
-EXPOSE 3000
+# Копируем .env файлы
+COPY Bot/.env ./Bot/.env
+COPY Server/.env ./Server/.env
 
-# Команда для запуска сервера
+# Открываем порты для серверов
+EXPOSE 3000 4000 5000
+
+# Команда для запуска основного сервера (можно модифицировать под docker-compose)
 CMD ["node", "Server/server.js"]
