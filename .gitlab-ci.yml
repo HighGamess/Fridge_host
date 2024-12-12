@@ -1,15 +1,17 @@
 stages:
-  - frontend
-  - backend
+  - test
+  - build
+  - deploy
 
-frontend:
-  stage: frontend
-  trigger:
-    include: $FRONTEND_DIR/.gitlab-ci.yml
-    strategy: depend
+include:
+  - project: "$DEVOPS_PROJECT_PATH"
+    ref: "main"
+    file: "gitlabci/build/backend/.gitlab-ci.yml"
 
-backend:
-  stage: backend
-  trigger:
-    include: $BACKEND_DIR/.gitlab-ci.yml
-    strategy: depend
+  - project: "$DEVOPS_PROJECT_PATH"
+    ref: "main"
+    file: "gitlabci/deploy/backend/.gitlab-ci.yml"
+
+  - project: "$DEVOPS_PROJECT_PATH"
+    ref: "main"
+    file: "clients/build/backend/aws/.gitlab-ci.yml"
