@@ -1,4 +1,4 @@
-require('dotenv').config(); // Загрузка переменных окружения
+require('dotenv').config(); 
 
 const express = require("express");
 const path = require("path");
@@ -12,7 +12,7 @@ const sha256 = (data) => crypto.createHash('sha256').update(data).digest('hex');
 const server = express();
 const port = process.env.PORT || 3000;
 const secretKey = process.env.JWT_SECRET;
-const botSecretKey = process.env.BOT_SECRET_KEY; // Добавлен Telegram Bot Secret Key
+const botSecretKey = process.env.BOT_SECRET_KEY; 
 
 console.log("POSTGRES_USER:", process.env.POSTGRES_USER); 
 console.log("POSTGRES_PASSWORD:", process.env.POSTGRES_PASSWORD);
