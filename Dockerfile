@@ -19,6 +19,10 @@ COPY frontend/package*.json ./
 
 RUN npm install
 
+WORKDIR /backend
+RUN npm install @telegram-apps/sdk
+
+WORKDIR /app/frontend
 COPY frontend ./frontend
 
 WORKDIR /app
