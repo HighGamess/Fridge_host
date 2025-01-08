@@ -12,9 +12,9 @@ COPY backend/Server ./Server
 COPY backend/Bot/.env ./Bot/.env
 COPY backend/Server/.env ./Server/.env
 
-WORKDIR /app/proxy-frontent-release
+WORKDIR /app/proxy-frontent
 
-COPY proxy-frontent-release ./proxy-frontent-release
+COPY proxy-frontent ./proxy-frontent
 
 WORKDIR /app/frontend
 
