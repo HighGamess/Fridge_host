@@ -12,10 +12,9 @@ COPY backend/Server ./Server
 COPY backend/Bot/.env ./Bot/.env
 COPY backend/Server/.env ./Server/.env
 
-WORKDIR /app/proxy-frontend
+WORKDIR /app/proxy-frontent-release
 
-COPY proxy-frontend ./proxy-frontend
-RUN npm install @telegram-apps/sdk
+COPY proxy-frontent-release ./proxy-frontent-release
 
 WORKDIR /app/frontend
 

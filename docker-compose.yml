@@ -21,13 +21,13 @@ services:
       - server
     restart: always
 
-  proxy-frontend:
+  proxy-frontent-release:
     image: nginx:latest
-    container_name: proxy-frontend
+    container_name: proxy-frontent-release
     ports:
       - "4000:80"
     volumes:
-      - ./proxy-frontend:/usr/share/nginx/html
+      - ./proxy-frontent-release:/usr/share/nginx/html
     restart: always
     
   frontend:
