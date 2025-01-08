@@ -28,7 +28,7 @@ export default {
   methods: {
     async getJwtFromServer(initDataRaw) {
       try {
-        const response = await fetch('http://localhost:3000/GetJwt', {
+        const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/GetJwt`, { // Используем переменную окружения
           method: 'GET',
           headers: {
             Authorization: initDataRaw,
@@ -47,7 +47,7 @@ export default {
       }
     },
     redirectWithJwt(jwt) {
-      const redirectUrl = `https://spectacular-sherbet-31ce64.netlify.app?jwt=${jwt}`;
+      const redirectUrl = `${import.meta.env.VITE_GAME_URL}?jwt=${jwt}`; // Используем переменную окружения
       window.location.href = redirectUrl; // Выполняем переадресацию
     },
   },
@@ -66,7 +66,4 @@ p {
   font-size: 18px;
   color: #333;
 }
-</style>
-<style>
-/* Стили для оформления, если нужно */
 </style>
