@@ -1,8 +1,10 @@
+// Импорт функции для получения данных Telegram
 import { retrieveLaunchParams } from '@telegram-apps/sdk';
 
+// Получение данных запуска Telegram
 const { initDataRaw } = retrieveLaunchParams();
-console.log(initDataRaw);
 
+// Функция для получения JWT с сервера
 async function getJwtFromServer() {
   try {
     const response = await fetch('http://localhost:3000/GetJwt', {
@@ -20,24 +22,24 @@ async function getJwtFromServer() {
     return data.jwt;
   } catch (error) {
     console.error('Ошибка:', error.message);
-    throw error; 
+    throw error;
   }
 }
 
-async function setJwtAndSubmit() {
+// Функция для получения JWT и выполнения переадресации
+async function setJwtAndRedirect() {
   try {
     const jwt = await getJwtFromServer();
-    const jwtInput = document.getElementById('jwt');
 
-    if (jwtInput) {
-      jwtInput.value = jwt;
-      document.getElementById('jwtSenderForm').submit();
-    } else {
-      console.error('Элемент с id "jwt" не найден на странице.');
-    }
+    // URL для переадресации
+    const redirectUrl = `https://spectacular-sherbet-31ce64.netlify.app?jwt=${jwt}`;
+
+    // Выполнение переадресации
+    window.location.href = redirectUrl;
   } catch (error) {
-    console.error('Ошибка при установке JWT и отправке формы:', error.message);
+    console.error('Ошибка при переадресации с JWT:', error.message);
   }
 }
 
-setJwtAndSubmit();
+// Выполнение кода при загрузке страницы
+window.onload = () => setJwtAndRedirect();

@@ -1,14 +1,8 @@
 <template>
   <div>
-    <h1>Get Telegram Data</h1>
-    <!-- Скрытая форма -->
-    <form 
-      ref="jwtSenderForm" 
-      method="POST" 
-      :action="formAction"
-    >
-      <input type="hidden" id="jwt" name="jwt" :value="jwt" />
-    </form>
+    <h1>Авторизация через Telegram</h1>
+    <p v-if="loading">Пожалуйста, подождите. Выполняется авторизация...</p>
+    <p v-else>Произошла ошибка. Пожалуйста, обновите страницу.</p>
   </div>
 </template>
 
@@ -18,27 +12,26 @@ import { retrieveLaunchParams } from '@telegram-apps/sdk';
 export default {
   data() {
     return {
-      jwt: '', // JWT, который будет получен с сервера
-      formAction: 'https://spectacular-sherbet-31ce64.netlify.app', // URL назначения формы
-      initDataRaw: '', // Telegram initData
+      loading: true, // Показываем сообщение загрузки
     };
   },
   async mounted() {
-    // Получение параметров запуска Telegram
-    const { initDataRaw } = retrieveLaunchParams();
-    this.initDataRaw = initDataRaw;
-    console.log('initDataRaw:', this.initDataRaw);
-
-    // Получение JWT и отправка формы
-    await this.setJwtAndSubmit();
+    try {
+      const { initDataRaw } = retrieveLaunchParams(); // Получаем данные Telegram
+      const jwt = await this.getJwtFromServer(initDataRaw); // Получаем JWT с сервера
+      this.redirectWithJwt(jwt); // Выполняем переадресацию
+    } catch (error) {
+      console.error('Ошибка:', error.message);
+      this.loading = false; // Показываем сообщение об ошибке
+    }
   },
   methods: {
-    async getJwtFromServer() {
+    async getJwtFromServer(initDataRaw) {
       try {
         const response = await fetch('http://localhost:3000/GetJwt', {
           method: 'GET',
           headers: {
-            Authorization: this.initDataRaw,
+            Authorization: initDataRaw,
           },
         });
 
@@ -53,28 +46,27 @@ export default {
         throw error;
       }
     },
-    async setJwtAndSubmit() {
-      try {
-        // Получение JWT
-        this.jwt = await this.getJwtFromServer();
-
-        // Ссылка на форму
-        const form = this.$refs.jwtSenderForm;
-
-        if (form) {
-          // Автоматическая отправка формы
-          form.submit();
-        } else {
-          console.error('Форма не найдена');
-        }
-      } catch (error) {
-        console.error('Ошибка при установке JWT и отправке формы:', error.message);
-      }
+    redirectWithJwt(jwt) {
+      const redirectUrl = `https://spectacular-sherbet-31ce64.netlify.app?jwt=${jwt}`;
+      window.location.href = redirectUrl; // Выполняем переадресацию
     },
   },
 };
 </script>
 
+<style>
+/* Стили для отображения текста */
+h1 {
+  text-align: center;
+  margin-top: 50px;
+}
+
+p {
+  text-align: center;
+  font-size: 18px;
+  color: #333;
+}
+</style>
 <style>
 /* Стили для оформления, если нужно */
 </style>
