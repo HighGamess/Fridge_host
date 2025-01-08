@@ -8,19 +8,20 @@ RUN npm install
 
 COPY backend/Bot ./Bot
 COPY backend/Server ./Server
-COPY backend/DataFrontend ./DataFrontend
 
 COPY backend/Bot/.env ./Bot/.env
 COPY backend/Server/.env ./Server/.env
+
+WORKDIR /app/proxy-frontend
+
+COPY proxy-frontend ./proxy-frontend
+RUN npm install @telegram-apps/sdk
 
 WORKDIR /app/frontend
 
 COPY frontend/package*.json ./
 
 RUN npm install
-
-WORKDIR /backend
-RUN npm install @telegram-apps/sdk
 
 WORKDIR /app/frontend
 COPY frontend ./frontend

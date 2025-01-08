@@ -1,4 +1,3 @@
-version: '3'
 services:
   server:
     build: .
@@ -22,13 +21,13 @@ services:
       - server
     restart: always
 
-  datafrontend:
+  proxy-frontend:
     image: nginx:latest
-    container_name: datafrontend
+    container_name: proxy-frontend
     ports:
       - "4000:80"
     volumes:
-      - ./backend/DataFrontend:/usr/share/nginx/html
+      - ./proxy-frontend:/usr/share/nginx/html
     restart: always
     
   frontend:
