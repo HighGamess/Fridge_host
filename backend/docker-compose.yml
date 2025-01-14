@@ -1,0 +1,19 @@
+version: '3'
+services:
+  server:
+    build: .
+    container_name: server
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+    restart: always
+    command: node /app/Server/server.js # Команда для запуска сервера
+
+  bot:
+    build: .
+    container_name: bot
+    command: node /app/Bot/bot.js # Команда для запуска бота
+    depends_on:
+      - server
+    restart: always

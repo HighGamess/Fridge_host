@@ -1,17 +1,38 @@
 stages:
-  - test
-  - build
-  - deploy
+  - proxy-frontend
+  - frontend
+  - backend
+  - bot
 
-include:
-  - project: "$DEVOPS_PROJECT_PATH"
-    ref: "main"
-    file: "gitlabci/build/backend/.gitlab-ci.yml"
+proxy-frontend:
+  stage: proxy-frontend
+  variables:
+    FRONTEND_DIR: proxy-frontend
+    FRONTEND_URL_PREFIX: "proxy-"
+  trigger:
+    include: $FRONTEND_DIR/.gitlab-ci.yml
+    strategy: depend
 
-  - project: "$DEVOPS_PROJECT_PATH"
-    ref: "main"
-    file: "gitlabci/deploy/backend/.gitlab-ci.yml"
+frontend:
+  stage: frontend
+  variables:
+    FRONTEND_DIR: frontend
+  trigger:
+    include: $FRONTEND_DIR/.gitlab-ci.yml
+    strategy: depend
 
-  - project: "$DEVOPS_PROJECT_PATH"
-    ref: "main"
-    file: "clients/build/backend/aws/.gitlab-ci.yml"
+backend:
+  stage: backend
+  variables:
+    BACKEND_DIR: backend/Server
+  trigger:
+    include: $BACKEND_DIR/.gitlab-ci.yml
+    strategy: depend
+
+bot:
+  stage: bot
+  variables:
+    BACKEND_DIR: backend/Bot
+  trigger:
+    include: $BACKEND_DIR/.gitlab-ci.yml
+    strategy: depend

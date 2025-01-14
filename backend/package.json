@@ -3,17 +3,18 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js"
+    "start": "npm-run-all --parallel start:server start:bot",
+    "start:server": "node Server/server.js",
+    "start:bot": "node Bot/bot.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.21.1",
+    "express": "^4.20.0",
     "jsonwebtoken": "^9.0.2",
     "node-telegram-bot-api": "^0.63.0",
+    "npm-run-all": "^4.1.5",
     "pg": "^8.13.1",
     "telegraf": "^4.16.3"
   },
