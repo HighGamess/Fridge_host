@@ -43,7 +43,15 @@ async function executeQuery(query, params = []) {
   }
 }
 
-server.use(cors());
+// Настройка CORS
+const corsOptions = {
+  origin: "https://baby1-proxy-fridge-app-frontend-dev.dev.babyparrot.xyz", // Укажите ваш фронтенд-домен
+  methods: ["GET", "POST", "OPTIONS"], // Разрешённые методы
+  allowedHeaders: ["Authorization", "Content-Type"], // Разрешённые заголовки
+  credentials: true, // Разрешить отправку cookies, если нужно
+};
+
+server.use(cors(corsOptions));
 server.use(express.json());
 server.use(express.static(path.join(__dirname, "FridgeHost")));
 
@@ -67,6 +75,8 @@ function verifyToken(req, res, next) {
   }
   return next();
 }
+
+server.options("*", cors(corsOptions)); // Обработка preflight-запросов
 
 server.get("/GetJwt", (req, res) => {
   const authorizationHeader = req.headers["authorization"];
@@ -104,20 +114,17 @@ server.get("/auth", async (req, res) => {
     const decoded = jwt.verify(token, secretKey);
     const hash = decoded.hash; // Получаем хэш из декодированного токена
 
-    // Теперь, вместо tgId, используем hash для поиска в базе данных
     const query = "SELECT * FROM users WHERE hash = $1";
     const params = [hash];
 
     const users = await executeQuery(query, params);
     if (users.length > 0) {
-      // Пользователь найден, возвращаем token
       res.status(200).json({ token });
     } else {
-      // Новый пользователь, создаем запись в базе данных
       const defaultData = JSON.stringify({ level: 0, money: 0 });
       const insertQuery =
         "INSERT INTO users (hash, save_data) VALUES ($1, $2) RETURNING *";
-      const newUser = await executeQuery(insertQuery, [hash, defaultData]);
+      await executeQuery(insertQuery, [hash, defaultData]);
       res.status(201).json({ token });
     }
   } catch (err) {
@@ -125,10 +132,9 @@ server.get("/auth", async (req, res) => {
   }
 });
 
-// API для сохранения данных
 server.get("/save", verifyToken, async (req, res) => {
   const saveData = JSON.parse(req.query.saveData);
-  const hash = req.user.hash; // Получаем хэш из декодированного токена
+  const hash = req.user.hash;
 
   try {
     const updateQuery = "UPDATE users SET save_data = $1 WHERE hash = $2";
@@ -139,9 +145,8 @@ server.get("/save", verifyToken, async (req, res) => {
   }
 });
 
-// API для загрузки данных
 server.get("/load", verifyToken, async (req, res) => {
-  const hash = req.user.hash; // Получаем хэш из декодированного токена
+  const hash = req.user.hash;
 
   try {
     const query = "SELECT save_data FROM users WHERE hash = $1";
