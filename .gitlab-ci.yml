@@ -25,6 +25,7 @@ backend:
   stage: backend
   variables:
     BACKEND_DIR: backend/Server
+    # BACKEND_URL_PREFIX: "backend-"
   trigger:
     include: $BACKEND_DIR/.gitlab-ci.yml
     strategy: depend
@@ -33,6 +34,7 @@ bot:
   stage: bot
   variables:
     BACKEND_DIR: backend/Bot
+    BACKEND_URL_PREFIX: "bot-"
   trigger:
     include: $BACKEND_DIR/.gitlab-ci.yml
     strategy: depend

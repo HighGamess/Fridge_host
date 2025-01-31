@@ -12,10 +12,8 @@ const sha256 = (data) => crypto.createHash("sha256").update(data).digest("hex");
 const server = express();
 const port = process.env.PORT || 3000;
 const secretKey = process.env.JWT_SECRET;
-const botSecretKey = process.env.BOT_SECRET_KEY;
+const botSecretKey = process.env.TELEGRAM_BOT_TOKEN;
 
-console.log("POSTGRES_USER:", process.env.POSTGRES_USER);
-console.log("POSTGRES_PASSWORD:", process.env.POSTGRES_PASSWORD);
 
 const client = new Client({
   user: process.env.POSTGRES_USER,
@@ -45,13 +43,15 @@ async function executeQuery(query, params = []) {
 
 // Настройка CORS
 const corsOptions = {
-  origin: "https://baby1-proxy-fridge-app-frontend-dev.dev.babyparrot.xyz", // Укажите ваш фронтенд-домен
+  origin: "*", // Укажите ваш фронтенд-домен
   methods: ["GET", "POST", "OPTIONS"], // Разрешённые методы
   allowedHeaders: ["Authorization", "Content-Type"], // Разрешённые заголовки
   credentials: true, // Разрешить отправку cookies, если нужно
 };
 
-server.use(cors(corsOptions));
+// server.use(cors(corsOptions));
+
+server.use(cors());
 server.use(express.json());
 server.use(express.static(path.join(__dirname, "FridgeHost")));
 
@@ -76,29 +76,81 @@ function verifyToken(req, res, next) {
   return next();
 }
 
-server.options("*", cors(corsOptions)); // Обработка preflight-запросов
-
+// server.options("*", cors(corsOptions)); // Обработка preflight-запросов
+server.options("*", cors());
 server.get("/GetJwt", (req, res) => {
-  const authorizationHeader = req.headers["authorization"];
+  try {
+    const authorizationHeader = req.headers["authorization"];
+    const botSecretKey = process.env.TELEGRAM_BOT_TOKEN;
 
-  if (!authorizationHeader) {
-    return res.status(400).json({ error: "Authorization header is missing" });
+    const { authData, hash } = parseAuthorizationHeader(authorizationHeader);
+    const validatedHash = validateAuth(authData, botSecretKey, hash);
+
+    const userJson = authData["user"];
+    if (!userJson) {
+      throw new Error("User data is missing");
+    }
+
+    const user = JSON.parse(userJson);
+    const userId = user.id;
+
+    if (!userId) {
+      throw new Error("User ID is missing");
+    }
+
+    const jwtToken = generateToken({ userId: userId }); 
+    res.json({ jwt: jwtToken });
+  } catch (err) {
+    console.error("Validation error:", err.message);
+    res.status(400).json({ error: err.message });
   }
-
-  const initDataRaw = authorizationHeader;
-  const initData = initDataRaw.replace(/tg_hash=[^&]*&?/, ""); // Удаляем tg_hash из initData
-  const tgHash = authorizationHeader.match(/tg_hash=([^&]*)/)[1]; // Извлекаем tg_hash
-
-  const computedHash = sha256(initData + botSecretKey); // Вычисляем хэш с bot_secret_key
-
-  if (computedHash !== tgHash) {
-    return res.status(401).json({ error: "Invalid hash" });
-  }
-
-  const jwtToken = generateToken({ hash: computedHash }); // Генерация JWT на основе данных
-
-  res.json({ jwt: jwtToken });
 });
+
+function parseAuthorizationHeader(header) {
+  if (!header) {
+    throw new Error("Authorization header is missing");
+  }
+
+  const params = new URLSearchParams(header);
+
+  const hash = params.get("hash");
+  if (!hash) {
+    throw new Error("Hash is missing in authorization header");
+  }
+  params.delete("hash");
+
+  const authData = {};
+  for (const [key, value] of params.entries()) {
+    authData[key] = value;
+  }
+
+  return { authData, hash };
+}
+
+function validateAuth(authData, secret, signature) {
+  const dataCheckArr = Object.entries(authData).map(
+    ([key, value]) => `${key}=${value}`
+  );
+
+  dataCheckArr.sort();
+
+  const dataCheckString = dataCheckArr.join("\n");
+
+  const mac1 = crypto.createHmac("sha256", "WebAppData");
+  mac1.update(secret);
+  const intermediateKey = mac1.digest();
+
+  const mac2 = crypto.createHmac("sha256", intermediateKey);
+  mac2.update(dataCheckString);
+  const calculatedSignature = mac2.digest("hex");
+
+  if (calculatedSignature !== signature) {
+    throw new Error(`Invalid auth signature. Expected: ${calculatedSignature}, Received: ${signature}`);
+  }
+
+  return calculatedSignature;
+}
+
 
 // Использование JWT для авторизации
 server.get("/auth", async (req, res) => {
@@ -112,10 +164,10 @@ server.get("/auth", async (req, res) => {
 
   try {
     const decoded = jwt.verify(token, secretKey);
-    const hash = decoded.hash; // Получаем хэш из декодированного токена
+    const userId = decoded.userId; // Получаем хэш из декодированного токена
 
-    const query = "SELECT * FROM users WHERE hash = $1";
-    const params = [hash];
+    const query = "SELECT * FROM users WHERE user_id = $1";
+    const params = [userId];
 
     const users = await executeQuery(query, params);
     if (users.length > 0) {
@@ -123,22 +175,23 @@ server.get("/auth", async (req, res) => {
     } else {
       const defaultData = JSON.stringify({ level: 0, money: 0 });
       const insertQuery =
-        "INSERT INTO users (hash, save_data) VALUES ($1, $2) RETURNING *";
-      await executeQuery(insertQuery, [hash, defaultData]);
+        "INSERT INTO users (user_id, save_data) VALUES ($1, $2) RETURNING *";
+      await executeQuery(insertQuery, [userId, defaultData]);
       res.status(201).json({ token });
     }
   } catch (err) {
-    res.status(500).send("Error occurred during authorization.");
+    console.error("auth error:", err.message);
+    res.status(500).send(err.message);
   }
 });
 
 server.get("/save", verifyToken, async (req, res) => {
   const saveData = JSON.parse(req.query.saveData);
-  const hash = req.user.hash;
+  const userId = req.user.userId;
 
   try {
-    const updateQuery = "UPDATE users SET save_data = $1 WHERE hash = $2";
-    await executeQuery(updateQuery, [JSON.stringify(saveData), hash]);
+    const updateQuery = "UPDATE users SET save_data = $1 WHERE user_id = $2";
+    await executeQuery(updateQuery, [JSON.stringify(saveData), userId]);
     res.status(200).send("Data saved successfully.");
   } catch (err) {
     res.status(500).send("Error occurred while saving data.");
@@ -146,11 +199,11 @@ server.get("/save", verifyToken, async (req, res) => {
 });
 
 server.get("/load", verifyToken, async (req, res) => {
-  const hash = req.user.hash;
+  const userId = req.user.userId;
 
   try {
-    const query = "SELECT save_data FROM users WHERE hash = $1";
-    const result = await executeQuery(query, [hash]);
+    const query = "SELECT save_data FROM users WHERE user_id = $1";
+    const result = await executeQuery(query, [userId]);
 
     if (result.length > 0) {
       res.status(200).json({ saveData: result[0].save_data });
@@ -161,6 +214,21 @@ server.get("/load", verifyToken, async (req, res) => {
     res.status(500).send("Error occurred while loading data.");
   }
 });
+
+server.get("/healthcheck", (req, res) => {
+  res.status(200).json({ status: "OK", message: "Service is healthy" });
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+  process.exit(1);
+});
+
 
 server.listen(port, () => {
   console.log(`Server is running on port ${port}`);

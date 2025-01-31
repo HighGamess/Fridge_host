@@ -4,7 +4,7 @@ const TelegramBot = require("node-telegram-bot-api");
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const GAME_URL = process.env.GAME_URL;
 const bot = new TelegramBot(TOKEN, { polling: true });
-const gameName = "fridgeTestGame";
+const gameName = process.env.TELEGRAM_GAME_SHORT_NAME;
 
 bot.onText(/help/, (msg) => {
   bot.sendMessage(msg.from.id, "Say /game if you want to play.");
