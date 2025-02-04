@@ -186,12 +186,13 @@ server.get("/auth", async (req, res) => {
 });
 
 server.get("/save", verifyToken, async (req, res) => {
-  const saveData = JSON.parse(req.query.saveData);
-  const userId = req.user.userId;
-
   try {
+    const saveData = JSON.parse(decodeURIComponent(req.headers["x-save-data"])); // Декодируем заголовок
+    const userId = req.user.userId;
+
     const updateQuery = "UPDATE users SET save_data = $1 WHERE user_id = $2";
     await executeQuery(updateQuery, [JSON.stringify(saveData), userId]);
+
     res.status(200).send("Data saved successfully.");
   } catch (err) {
     res.status(500).send("Error occurred while saving data.");
