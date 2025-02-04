@@ -205,6 +205,9 @@ server.get("/load", verifyToken, async (req, res) => {
     const query = "SELECT save_data FROM users WHERE user_id = $1";
     const result = await executeQuery(query, [userId]);
 
+    console.log(`userID: ${userId}`)
+    console.log(`user data: ${result}`)
+
     if (result.length > 0) {
       res.status(200).json({ saveData: result[0].save_data });
     } else {
