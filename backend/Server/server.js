@@ -14,7 +14,6 @@ const port = process.env.PORT || 3000;
 const secretKey = process.env.JWT_SECRET;
 const botSecretKey = process.env.TELEGRAM_BOT_TOKEN;
 
-
 const client = new Client({
   user: process.env.POSTGRES_USER,
   host: process.env.POSTGRES_HOST,
@@ -98,7 +97,7 @@ server.get("/GetJwt", (req, res) => {
       throw new Error("User ID is missing");
     }
 
-    const jwtToken = generateToken({ userId: userId }); 
+    const jwtToken = generateToken({ userId: userId });
     res.json({ jwt: jwtToken });
   } catch (err) {
     console.error("Validation error:", err.message);
@@ -145,12 +144,13 @@ function validateAuth(authData, secret, signature) {
   const calculatedSignature = mac2.digest("hex");
 
   if (calculatedSignature !== signature) {
-    throw new Error(`Invalid auth signature. Expected: ${calculatedSignature}, Received: ${signature}`);
+    throw new Error(
+      `Invalid auth signature. Expected: ${calculatedSignature}, Received: ${signature}`
+    );
   }
 
   return calculatedSignature;
 }
-
 
 // Использование JWT для авторизации
 server.get("/auth", async (req, res) => {
@@ -205,8 +205,8 @@ server.get("/load", verifyToken, async (req, res) => {
     const query = "SELECT save_data FROM users WHERE user_id = $1";
     const result = await executeQuery(query, [userId]);
 
-    console.log(`userID: ${userId}`)
-    console.log(`user data: ${result}`)
+    console.log(`userID: ${userId}`);
+    console.log(`user data: ${JSON.stringify(result, null, 2)}`);
 
     if (result.length > 0) {
       res.status(200).json({ saveData: result[0].save_data });
@@ -231,7 +231,6 @@ process.on("unhandledRejection", (reason, promise) => {
   console.error("Unhandled Rejection at:", promise, "reason:", reason);
   process.exit(1);
 });
-
 
 server.listen(port, () => {
   console.log(`Server is running on port ${port}`);
