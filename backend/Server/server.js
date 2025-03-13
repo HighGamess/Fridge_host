@@ -42,17 +42,15 @@ async function executeQuery(query, params = []) {
 
 // Настройка CORS
 const corsOptions = {
-  origin: "*", // Укажите ваш фронтенд-домен
-  methods: ["GET", "POST", "OPTIONS"], // Разрешённые методы
-  allowedHeaders: ["Authorization", "Content-Type"], // Разрешённые заголовки
-  credentials: true, // Разрешить отправку cookies, если нужно
+  origin: "https://baby1-fridge-app-frontend-dev.dev.babyparrot.xyz", // Замените на URL фронтенда
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Authorization", "Content-Type"],
+  credentials: true, // Если используются куки или авторизация
 };
 
-// server.use(cors(corsOptions));
+server.use(cors(corsOptions));
+server.options("*", cors(corsOptions)); // Обработка preflight-запросов
 
-server.use(cors());
-server.use(express.json());
-server.use(express.static(path.join(__dirname, "FridgeHost")));
 
 function generateToken(payload) {
   return jwt.sign(payload, secretKey, { expiresIn: "1h" });
