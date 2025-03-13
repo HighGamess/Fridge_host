@@ -209,7 +209,7 @@ server.get("/load", verifyToken, async (req, res) => {
     console.log(`user data: ${JSON.stringify(result, null, 2)}`);
 
     if (result.length > 0) {
-      res.status(200).json({ saveData: result[0].save_data });
+      res.status(200).json(result[0].save_data);
     } else {
       res.status(404).send("User data not found.");
     }
