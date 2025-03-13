@@ -42,15 +42,17 @@ async function executeQuery(query, params = []) {
 
 // Настройка CORS
 const corsOptions = {
-  origin: "https://baby1-fridge-app-frontend-dev.dev.babyparrot.xyz", // Замените на URL фронтенда
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Authorization", "Content-Type"],
-  credentials: true, // Если используются куки или авторизация
+  origin: "*", // Укажите ваш фронтенд-домен
+  methods: ["GET", "POST", "OPTIONS"], // Разрешённые методы
+  allowedHeaders: ["Authorization", "Content-Type"], // Разрешённые заголовки
+  credentials: true, // Разрешить отправку cookies, если нужно
 };
 
-server.use(cors(corsOptions));
-server.options("*", cors(corsOptions)); // Обработка preflight-запросов
+// server.use(cors(corsOptions));
 
+server.use(cors());
+server.use(express.json());
+server.use(express.static(path.join(__dirname, "FridgeHost")));
 
 function generateToken(payload) {
   return jwt.sign(payload, secretKey, { expiresIn: "1h" });
@@ -207,7 +209,7 @@ server.get("/load", verifyToken, async (req, res) => {
     console.log(`user data: ${JSON.stringify(result, null, 2)}`);
 
     if (result.length > 0) {
-      res.status(200).json(result[0].save_data);
+      res.status(200).json(result[0].save_data); // Отправляем только данные
     } else {
       res.status(404).send("User data not found.");
     }
@@ -215,6 +217,7 @@ server.get("/load", verifyToken, async (req, res) => {
     res.status(500).send("Error occurred while loading data.");
   }
 });
+
 
 server.get("/healthcheck", (req, res) => {
   res.status(200).json({ status: "OK", message: "Service is healthy" });
