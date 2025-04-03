@@ -186,14 +186,20 @@ server.get("/auth", async (req, res) => {
 });
 
 server.get("/save", verifyToken, async (req, res) => {
-  const saveData = JSON.parse(req.query.saveData);
-  const userId = req.user.userId;
-
   try {
+    if (!req.query.saveData) {
+      return res.status(400).send("Missing saveData parameter.");
+    }
+
+    const saveData = JSON.parse(req.query.saveData);
+    const userId = req.user.userId;
+
     const updateQuery = "UPDATE users SET save_data = $1 WHERE user_id = $2";
     await executeQuery(updateQuery, [JSON.stringify(saveData), userId]);
+
     res.status(200).send("Data saved successfully.");
   } catch (err) {
+    console.error("Error processing saveData:", err);
     res.status(500).send("Error occurred while saving data.");
   }
 });
