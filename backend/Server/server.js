@@ -188,19 +188,46 @@ server.get("/auth", async (req, res) => {
 server.get("/save", verifyToken, async (req, res) => {
   try {
     if (!req.query.saveData) {
-      return res.status(400).send("Missing saveData parameter.");
+      return res.status(400).send("Отсутствует параметр saveData.");
     }
 
     const saveData = JSON.parse(req.query.saveData);
     const userId = req.user.userId;
 
-    const updateQuery = "UPDATE users SET save_data = $1 WHERE user_id = $2";
-    await executeQuery(updateQuery, [JSON.stringify(saveData), userId]);
+    // Проверяем, что saveData содержит level и money
+    if (typeof saveData.level !== "number" || typeof saveData.money !== "number") {
+      return res.status(400).send("Неверный формат saveData. Поля 'level' и 'money' должны быть числами.");
+    }
 
-    res.status(200).send("Data saved successfully.");
+    // Получаем текущие значения level и money из базы данных
+    const selectQuery = "SELECT level, money FROM users WHERE user_id = $1";
+    const currentDataResult = await executeQuery(selectQuery, [userId]);
+
+    if (currentDataResult.rows.length === 0) {
+      return res.status(404).send("Пользователь не найден.");
+    }
+
+    const currentLevel = currentDataResult.rows[0].level;
+    const currentMoney = currentDataResult.rows[0].money;
+
+    // Проверяем, что новый level больше текущего, но не более чем на 2
+    if (saveData.level <= currentLevel || saveData.level > currentLevel + 2) {
+      return res.status(400).send("Неверное значение level. Оно должно быть больше текущего, но не более чем на 2.");
+    }
+
+    // Проверяем, что деньги не увеличиваются более чем на 2000
+    if (saveData.money > currentMoney + 2000) {
+      return res.status(400).send("Неверное значение money. Нельзя увеличивать деньги более чем на 2000.");
+    }
+
+    // Обновляем level и money в базе данных
+    const updateQuery = "UPDATE users SET level = $1, money = $2 WHERE user_id = $3";
+    await executeQuery(updateQuery, [saveData.level, saveData.money, userId]);
+
+    res.status(200).send("Данные успешно сохранены.");
   } catch (err) {
-    console.error("Error processing saveData:", err);
-    res.status(500).send("Error occurred while saving data.");
+    console.error("Ошибка при обработке saveData:", err);
+    res.status(500).send("Произошла ошибка при сохранении данных.");
   }
 });
 
@@ -208,22 +235,29 @@ server.get("/load", verifyToken, async (req, res) => {
   const userId = req.user.userId;
 
   try {
-    const query = "SELECT save_data FROM users WHERE user_id = $1";
+    // Выполняем запрос для получения level и money из базы данных
+    const query = "SELECT level, money FROM users WHERE user_id = $1";
     const result = await executeQuery(query, [userId]);
 
     console.log(`userID: ${userId}`);
     console.log(`user data: ${JSON.stringify(result, null, 2)}`);
 
-    if (result.length > 0) {
-      res.status(200).json(result[0].save_data); // Отправляем только данные
+    if (result.rows.length > 0) {
+      // Формируем объект с данными level и money
+      const userData = {
+        level: result.rows[0].level,
+        money: result.rows[0].money
+      };
+
+      res.status(200).json(userData); // Отправляем данные в виде JSON
     } else {
-      res.status(404).send("User data not found.");
+      res.status(404).send("Данные пользователя не найдены.");
     }
   } catch (err) {
-    res.status(500).send("Error occurred while loading data.");
+    console.error("Ошибка при загрузке данных:", err);
+    res.status(500).send("Произошла ошибка при загрузке данных.");
   }
 });
-
 
 server.get("/healthcheck", (req, res) => {
   res.status(200).json({ status: "OK", message: "Service is healthy" });
