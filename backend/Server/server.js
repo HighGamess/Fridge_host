@@ -40,15 +40,12 @@ async function executeQuery(query, params = []) {
   }
 }
 
-// Настройка CORS
 const corsOptions = {
-  origin: "*", // Укажите ваш фронтенд-домен
-  methods: ["GET", "POST", "OPTIONS"], // Разрешённые методы
-  allowedHeaders: ["Authorization", "Content-Type"], // Разрешённые заголовки
-  credentials: true, // Разрешить отправку cookies, если нужно
+  origin: "*", 
+  methods: ["GET", "POST", "OPTIONS"], 
+  allowedHeaders: ["Authorization", "Content-Type"], 
+  credentials: true,
 };
-
-// server.use(cors(corsOptions));
 
 server.use(cors());
 server.use(express.json());
@@ -75,7 +72,6 @@ function verifyToken(req, res, next) {
   return next();
 }
 
-// server.options("*", cors(corsOptions)); // Обработка preflight-запросов
 server.options("*", cors());
 server.get("/GetJwt", (req, res) => {
   try {
@@ -152,7 +148,6 @@ function validateAuth(authData, secret, signature) {
   return calculatedSignature;
 }
 
-// Использование JWT для авторизации
 server.get("/auth", async (req, res) => {
   const authHeader = req.headers["authorization"];
 
@@ -164,7 +159,7 @@ server.get("/auth", async (req, res) => {
 
   try {
     const decoded = jwt.verify(token, secretKey);
-    const userId = decoded.userId; // Получаем хэш из декодированного токена
+    const userId = decoded.userId;
 
     const query = "SELECT * FROM users WHERE user_id = $1";
     const params = [userId];
@@ -194,12 +189,10 @@ server.get("/save", verifyToken, async (req, res) => {
     const saveData = JSON.parse(req.query.saveData);
     const userId = req.user.userId;
 
-    // Проверяем, что saveData содержит level и money
     if (typeof saveData.level !== "number" || typeof saveData.money !== "number") {
       return res.status(400).send("Неверный формат saveData. Поля 'level' и 'money' должны быть числами.");
     }
 
-    // Получаем текущие значения level и money из базы данных
     const selectQuery = "SELECT level, money FROM users WHERE user_id = $1";
     const currentDataResult = await executeQuery(selectQuery, [userId]);
 
@@ -210,17 +203,14 @@ server.get("/save", verifyToken, async (req, res) => {
     const currentLevel = currentDataResult.rows[0].level;
     const currentMoney = currentDataResult.rows[0].money;
 
-    // Проверяем, что новый level больше текущего, но не более чем на 2
     if (saveData.level <= currentLevel || saveData.level > currentLevel + 2) {
       return res.status(400).send("Неверное значение level. Оно должно быть больше текущего, но не более чем на 2.");
     }
 
-    // Проверяем, что деньги не увеличиваются более чем на 2000
     if (saveData.money > currentMoney + 2000) {
       return res.status(400).send("Неверное значение money. Нельзя увеличивать деньги более чем на 2000.");
     }
 
-    // Обновляем level и money в базе данных
     const updateQuery = "UPDATE users SET level = $1, money = $2 WHERE user_id = $3";
     await executeQuery(updateQuery, [saveData.level, saveData.money, userId]);
 
@@ -235,21 +225,19 @@ server.get("/load", verifyToken, async (req, res) => {
   const userId = req.user.userId;
 
   try {
-    // Выполняем запрос для получения level и money из базы данных
     const query = "SELECT level, money FROM users WHERE user_id = $1";
     const result = await executeQuery(query, [userId]);
 
     console.log(`userID: ${userId}`);
     console.log(`user data: ${JSON.stringify(result, null, 2)}`);
 
-    if (result.rows.length > 0) {
-      // Формируем объект с данными level и money
+    if (result.length > 0) {
       const userData = {
-        level: result.rows[0].level,
-        money: result.rows[0].money
+        level: result.level,
+        money: result.money
       };
 
-      res.status(200).json(userData); // Отправляем данные в виде JSON
+      res.status(200).json(userData); 
     } else {
       res.status(404).send("Данные пользователя не найдены.");
     }
