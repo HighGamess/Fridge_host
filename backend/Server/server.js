@@ -196,12 +196,12 @@ server.get("/save", verifyToken, async (req, res) => {
     const selectQuery = "SELECT level, money FROM users WHERE user_id = $1";
     const currentDataResult = await executeQuery(selectQuery, [userId]);
 
-    if (currentDataResult.rows.length === 0) {
+    if (currentDataResult.length === 0) {
       return res.status(404).send("Пользователь не найден.");
     }
 
-    const currentLevel = currentDataResult.rows[0].level;
-    const currentMoney = currentDataResult.rows[0].money;
+    const currentLevel = currentDataResult.level;
+    const currentMoney = currentDataResult.money;
 
     if (saveData.level <= currentLevel || saveData.level > currentLevel + 2) {
       return res.status(400).send("Неверное значение level. Оно должно быть больше текущего, но не более чем на 2.");
