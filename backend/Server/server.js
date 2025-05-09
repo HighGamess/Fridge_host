@@ -162,21 +162,23 @@ server.get("/auth", async (req, res) => {
     const userId = decoded.userId;
 
     const query = "SELECT * FROM users WHERE user_id = $1";
-    const params = [userId];
+    const users = await executeQuery(query, [userId]);
 
-    const users = await executeQuery(query, params);
     if (users.length > 0) {
       res.status(200).json({ token });
     } else {
-      const defaultData = JSON.stringify({ level: 0, money: 0 });
-      const insertQuery =
-        "INSERT INTO users (user_id, save_data) VALUES ($1, $2) RETURNING *";
-      await executeQuery(insertQuery, [userId, defaultData]);
+      const insertQuery = `
+        INSERT INTO users (user_id, level, money)
+        VALUES ($1, $2, $3)
+        RETURNING *;
+      `;
+      await executeQuery(insertQuery, [userId, 0, 0]);
+
       res.status(201).json({ token });
     }
   } catch (err) {
     console.error("auth error:", err.message);
-    res.status(500).send(err.message);
+    res.status(500).send("Ошибка авторизации");
   }
 });
 
