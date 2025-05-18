@@ -202,8 +202,8 @@ server.get("/save", verifyToken, async (req, res) => {
       return res.status(404).send("Пользователь не найден.");
     }
 
-    const currentLevel = currentDataResult.level;
-    const currentMoney = currentDataResult.money;
+    const currentLevel = currentDataResult[0].level;
+    const currentMoney = currentDataResult[0].money;
 
     if (saveData.level <= currentLevel || saveData.level > currentLevel + 2) {
       return res.status(400).send("Неверное значение level. Оно должно быть больше текущего, но не более чем на 2.");
@@ -235,10 +235,11 @@ server.get("/load", verifyToken, async (req, res) => {
 
     if (result.length > 0) {
       const userData = {
-        level: result.level,
-        money: result.money
+        level: result[0].level,
+        money: result[0].money,
       };
-
+    
+      console.log(userData);
       res.status(200).json(userData); 
     } else {
       res.status(404).send("Данные пользователя не найдены.");
