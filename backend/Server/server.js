@@ -223,6 +223,56 @@ server.get("/save", verifyToken, async (req, res) => {
   }
 });
 
+server.get("/save/money", verifyToken, async (req, res) => {
+  try {
+    const money = parseInt(req.query.value, 10);
+    const userId = req.user.userId;
+
+    if (isNaN(money)) {
+      return res.status(400).send("Параметр 'value' должен быть числом.");
+    }
+
+    const current = await executeQuery("SELECT money FROM users WHERE user_id = $1", [userId]);
+    if (current.length === 0) return res.status(404).send("Пользователь не найден.");
+
+    const currentMoney = current[0].money;
+    if (money > currentMoney + 2000) {
+      return res.status(400).send("Нельзя увеличивать деньги более чем на 2000.");
+    }
+
+    await executeQuery("UPDATE users SET money = $1 WHERE user_id = $2", [money, userId]);
+    res.status(200).send("Деньги успешно сохранены.");
+  } catch (err) {
+    console.error("Ошибка при сохранении денег:", err);
+    res.status(500).send("Произошла ошибка при сохранении денег.");
+  }
+});
+
+server.get("/save/level", verifyToken, async (req, res) => {
+  try {
+    const level = parseInt(req.query.value, 10);
+    const userId = req.user.userId;
+
+    if (isNaN(level)) {
+      return res.status(400).send("Параметр 'value' должен быть числом.");
+    }
+
+    const current = await executeQuery("SELECT level FROM users WHERE user_id = $1", [userId]);
+    if (current.length === 0) return res.status(404).send("Пользователь не найден.");
+
+    const currentLevel = current[0].level;
+    if (level <= currentLevel || level > currentLevel + 2) {
+      return res.status(400).send("Неверное значение level. Оно должно быть больше текущего, но не более чем на 2.");
+    }
+
+    await executeQuery("UPDATE users SET level = $1 WHERE user_id = $2", [level, userId]);
+    res.status(200).send("Уровень успешно сохранён.");
+  } catch (err) {
+    console.error("Ошибка при сохранении уровня:", err);
+    res.status(500).send("Произошла ошибка при сохранении уровня.");
+  }
+});
+
 server.get("/load", verifyToken, async (req, res) => {
   const userId = req.user.userId;
 
